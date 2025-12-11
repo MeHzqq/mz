@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeHz</title>
+  <title>PC Build Quote</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --primary: #1f2937;
+      --accent: #f0c541;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --highlight: #fdf6e3;
+      --success: #d1fae5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: black;
+      color: white;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      background: var(--bg);
+      color: var(--primary);
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      padding-top: 10%;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-bottom: 5%;
+    .page {
+      width: min(1100px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.06);
+      padding: 28px;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+    header {
+      display: flex;
+      gap: 20px;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: -0.4px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0;
+      font-size: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    th, td {
+      text-align: left;
+      padding: 14px 16px;
+      font-size: 14px;
+    }
+
+    th {
+      background: #0f172a;
+      color: #fff;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    tr:nth-child(odd) td {
+      background: #fff;
+    }
+
+    td:first-child {
+      font-weight: 600;
+    }
+
+    .highlight td {
+      background: var(--highlight);
+      font-weight: 600;
+    }
+
+    .totals-row td {
+      background: var(--success);
+      font-weight: 700;
+      border-top: 2px solid #059669;
+    }
+
+    .price, .savings {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #0ea5e9;
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+    }
+
+    a {
+      color: #0f172a;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 16px; }
+      th, td { font-size: 13px; padding: 10px 12px; }
+      h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>MeHz</h1>
+  <ul>
+    <li>/stream</li>
+    <li>z</li>
+    <li>z</li>
+  </ul>
+  <main class="page" aria-label="PC build quote">
+    <header>
+      <div>
+        <h1>PC Build Quote</h1>
+        <p class="subtitle">Pricing snapshot with Australian store links</p>
+      </div>
+      <span class="badge">May 2024</span>
+    </header>
+
+    <table aria-describedby="quote-details">
+      <thead>
+        <tr>
+          <th scope="col">Component</th>
+          <th scope="col">Description</th>
+          <th scope="col" class="price">RRP</th>
+          <th scope="col" class="price">Price</th>
+          <th scope="col" class="price">Savings</th>
+        </tr>
+      </thead>
+      <tbody id="quote-details">
+        <tr>
+          <td>Motherboard</td>
+          <td><a href="https://www.mwave.com.au/product/gigabyte-b550m-k-amd-am4-microatx-motherboard-ac49121" target="_blank" rel="noreferrer">GIGABYTE B550M K</a></td>
+          <td class="price">$99</td>
+          <td class="price">$50</td>
+          <td class="price savings">$50</td>
+        </tr>
+        <tr>
+          <td>CPU</td>
+          <td><a href="https://www.mwave.com.au/product/amd-ryzen-9-5950x-16core-am4-34ghz-cpu-processor-w-wof-ac37419" target="_blank" rel="noreferrer">AMD 5950X</a></td>
+          <td class="price">$549</td>
+          <td class="price">$275</td>
+          <td class="price savings">$275</td>
+        </tr>
+        <tr>
+          <td>RAM</td>
+          <td><a href="https://www.scorptec.com.au/product/memory/ddr4/86678-f4-3600c18d-32gtzr" target="_blank" rel="noreferrer">G.Skill Trident Z F4-3600C18D-32GTZR</a></td>
+          <td class="price">$399</td>
+          <td class="price">$200</td>
+          <td class="price savings">$200</td>
+        </tr>
+        <tr>
+          <td>SSD</td>
+          <td><a href="https://www.mwave.com.au/product/samsung-970-evo-plus-500gb-nvme-ssd-mzv7s500bw-ac21862" target="_blank" rel="noreferrer">SAMSUNG 970 EVO PLUS 500GB</a></td>
+          <td class="price">$99</td>
+          <td class="price">$50</td>
+          <td class="price savings">$50</td>
+        </tr>
+        <tr class="highlight">
+          <td>CASE</td>
+          <td><a href="https://www.pccasegear.com/products/54073/aerocool-d501a-mesh-argb-mid-tower-case" target="_blank" rel="noreferrer">Aerocool D501A Glass Mid Tower Case Black</a></td>
+          <td class="price">$119</td>
+          <td class="price">$119</td>
+          <td class="price savings">$0</td>
+        </tr>
+        <tr class="highlight">
+          <td>GPU</td>
+          <td><a href="https://www.mwave.com.au/product/pny-geforce-rtx-3070-ti-8gb-xlr8-gaming-revel-epicx-rgb-lhr-graphics-card-ac48072" target="_blank" rel="noreferrer">PNY 3070TI</a></td>
+          <td class="price">$1,359</td>
+          <td class="price">$1,213</td>
+          <td class="price savings">$146</td>
+        </tr>
+        <tr>
+          <td>PSU</td>
+          <td><a href="https://www.pccasegear.com/products/57046/corsair-rm750e-rm-series-750w-80-plus-gold-power-supply" target="_blank" rel="noreferrer">CORSAIR RM750e</a></td>
+          <td class="price">$129</td>
+          <td class="price">$65</td>
+          <td class="price savings">$65</td>
+        </tr>
+        <tr>
+          <td>MONITOR</td>
+          <td><a href="https://www.mwave.com.au/product/asus-va24e-238-full-hd-60hz-ips-monitor-ac27666" target="_blank" rel="noreferrer">Random ASUS 60hz</a></td>
+          <td class="price">$61</td>
+          <td class="price">$31</td>
+          <td class="price savings">$31</td>
+        </tr>
+        <tr>
+          <td>LABOUR</td>
+          <td><a href="https://www.centrecom.com.au/computer-build-service" target="_blank" rel="noreferrer">PC Build, Windows 11 + Microsoft Office, Dead GPU Changeover, Stability Testing.</a></td>
+          <td class="price">$100</td>
+          <td class="price">$0</td>
+          <td class="price savings">$100</td>
+        </tr>
+        <tr class="totals-row">
+          <td colspan="2">TOTALS</td>
+          <td class="price">$2,914</td>
+          <td class="price">$2,000</td>
+          <td class="price savings">$914 (31%)</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>
