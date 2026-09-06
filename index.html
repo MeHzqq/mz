@@ -4,11 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>mehz.org</title>
-  <meta name="description" content="mehz.org" />
+  <meta name="description" content="See what your browser reveals without a permission prompt: public IP, browser, display, device and privacy signals." />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="visitor.css?v=1" />
 </head>
 <body>
   <canvas id="matrix" aria-hidden="true"></canvas>
@@ -27,6 +29,51 @@
     </a>
   </header>
 
+  <main class="exposure" id="visitor-display">
+    <section class="exposure-intro" aria-labelledby="exposure-title">
+      <p class="eyebrow"><span class="signal-dot" aria-hidden="true"></span> NO PERMISSION PROMPT REQUIRED</p>
+      <h1 id="exposure-title">Your browser.<br /><span>In plain sight.</span></h1>
+      <p class="intro-copy">Every visit leaves a few clues. These are the details this page can read about <strong>your current browser and connection</strong>, without asking for extra access.</p>
+      <p class="intro-note">Visible to a website does not mean visible to everyone. This is a live view for you, not a public record of visitors.</p>
+    </section>
+
+    <noscript><p class="notice">JavaScript is disabled. Browser details cannot be displayed, but web servers still receive your IP address and request headers when you visit.</p></noscript>
+    <div id="visitor-results" hidden>
+      <section class="signal-summary" aria-label="At a glance">
+        <div class="summary-cell"><span>PUBLIC IP</span><strong id="summary-ip">Checking…</strong><small>Seen by this site's network</small></div>
+        <div class="summary-cell"><span>APPROXIMATE COUNTRY</span><strong id="summary-country">Checking…</strong><small>From your IP, not GPS</small></div>
+        <div class="summary-cell"><span>BROWSER / REPORTED</span><strong id="summary-browser">Checking…</strong><small>May be reduced or disguised</small></div>
+        <div class="summary-cell"><span>YOUR TIME ZONE</span><strong id="summary-zone">Checking…</strong><small>Browser setting, not proof of location</small></div>
+      </section>
+
+      <div class="signal-toolbar">
+        <div><p class="eyebrow">THE DETAILS</p><p id="signal-count" role="status" aria-live="polite"></p></div>
+        <label class="signal-search"><span class="sr-only">Filter details</span><input id="signal-filter" type="search" placeholder="Filter details…" autocomplete="off" /></label>
+        <button id="refresh-signals" type="button">Refresh snapshot <span aria-hidden="true">↻</span></button>
+        <button id="toggle-motion" type="button" aria-pressed="false">Hide animation</button>
+      </div>
+      <p class="signal-legend"><span class="source-label">BROWSER</span> Read on this device <span class="source-label">NETWORK</span> Seen by Cloudflare <span class="source-label">ESTIMATE</span> Approximate or inferred</p>
+      <p id="snapshot-status" class="snapshot-status" role="status" aria-live="polite">Reading available signals…</p>
+      <div id="signal-groups" class="signal-groups"></div>
+      <p id="no-signals" class="notice" hidden>No matching details. Try “screen”, “privacy” or “location”.</p>
+    </div>
+
+    <section class="boundary-panel" aria-labelledby="boundary-title">
+      <p class="eyebrow">WHERE THE BOUNDARY IS</p>
+      <h2 id="boundary-title">A glimpse, not your whole identity.</h2>
+      <div class="boundary-grid">
+        <div><h3>Requires extra access</h3><p>Precise geolocation, camera, microphone, screen capture, and access to local files or clipboard contents are gated by permissions, user actions or browser restrictions. This page does not request them, even if you previously granted access.</p></div>
+        <div><h3>Cannot be read directly</h3><p>Your name, email, passwords, full browsing history, MAC address and device serial number are not normally exposed to an ordinary page. A site may learn your identity if you sign in or provide it.</p></div>
+        <div><h3>Clues can add up</h3><p>Other sites can combine browser, screen and hardware signals into a fingerprint. A VPN changes the network address a site sees; it does not hide every browser signal. Values may be shared, spoofed or deliberately limited.</p></div>
+      </div>
+    </section>
+    <footer class="exposure-footer">
+      <p><strong>How this display works.</strong> Browser readings stay in this page's memory. No visitor profile, fingerprint ID, analytics event or database record is created by this display. IP and country come from this site's Cloudflare diagnostic endpoint. Hosting providers and the existing Google Fonts service still receive normal web requests and may keep their own logs.</p>
+      <p>Country is approximate; a VPN, proxy or mobile network can put it elsewhere. City, street address, precise coordinates and ISP are not supplied by this lookup. “Not exposed” means unavailable, unsupported or withheld — not that the feature does not exist.</p>
+      <p class="reference-links">Read the documentation: <a href="https://developers.cloudflare.com/fundamentals/reference/cdn-cgi-endpoint/" target="_blank" rel="noopener noreferrer">Cloudflare network diagnostics ↗</a> <a href="https://developer.mozilla.org/en-US/docs/Glossary/Fingerprinting" target="_blank" rel="noopener noreferrer">Browser fingerprinting ↗</a></p>
+    </footer>
+  </main>
   <script src="script.js"></script>
+  <script src="visitor.js?v=1" defer></script>
 </body>
 </html>
