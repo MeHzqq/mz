@@ -1,1 +1,14 @@
-body { height: auto; min-height: 100vh; overflow: auto; }#matrix { opacity: .22; }.visitor { position: relative; z-index: 5; max-width: 620px; margin: 32px 24px 64px; padding: 20px 24px; background: rgba(2,8,4,.88); font: 12px/1.8 var(--font-mono); }.visitor h1 { margin: 0 0 18px; color: var(--green-bright); font: 500 14px/1.5 var(--font-display); letter-spacing: .04em; }#visitor-status { color: #a8c0aa; margin: 0 0 12px; }.visitor-list { margin: 0; }.visitor-row { display: grid; grid-template-columns: 146px minmax(0,1fr); gap: 14px; break-inside: avoid; padding: 3px 0; }.visitor-row dt { color: #a8c0aa; }.visitor-row dd { margin: 0; color: var(--green-bright); overflow-wrap: anywhere; }#test-speed { margin-top: 20px; padding: 6px 10px; background: transparent; border: 1px solid #35523b; color: var(--green-bright); font: inherit; cursor: pointer; }#test-speed:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }#test-speed:disabled { opacity: .65; cursor: wait; }[hidden] { display: none !important; }@media (max-width: 800px) { .visitor { margin: 22px 18px 48px; padding: 18px; } }@media (max-width: 420px) { .visitor { padding: 12px; } .visitor-row { grid-template-columns: 116px minmax(0,1fr); gap: 10px; } }
+body { height: auto; min-height: 100vh; overflow: auto; }
+.visitor { position: relative; z-index: 5; max-width: 620px; margin: 32px 24px 64px; padding: 20px 24px; background: rgba(2,8,4,.88); font: 12px/1.8 var(--font-mono); }
+.visitor h1 { margin: 0 0 18px; color: var(--green-bright); font: 500 14px/1.5 var(--font-display); letter-spacing: .04em; }
+#visitor-status { color: #a8c0aa; margin: 0 0 12px; }
+.visitor-list { margin: 0; }
+.visitor-row { display: grid; grid-template-columns: 146px minmax(0,1fr); gap: 14px; break-inside: avoid; padding: 3px 0; }
+.visitor-row dt { color: #a8c0aa; }
+.visitor-row dd { margin: 0; color: var(--green-bright); overflow-wrap: anywhere; }
+#test-speed { margin-top: 20px; padding: 6px 10px; background: transparent; border: 1px solid #35523b; color: var(--green-bright); font: inherit; cursor: pointer; }
+#test-speed:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+#test-speed:disabled { opacity: .65; cursor: wait; }
+[hidden] { display: none !important; }
+@media (max-width: 800px) { .visitor { margin: 22px 18px 48px; padding: 18px; } }
+@media (max-width: 420px) { .visitor { padding: 12px; } .visitor-row { grid-template-columns: 116px minmax(0,1fr); gap: 10px; } }
