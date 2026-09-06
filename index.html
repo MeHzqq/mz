@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="visitor.css?v=2" />
+  <link rel="stylesheet" href="visitor.css?v=3" />
 </head>
 <body>
   <canvas id="matrix" aria-hidden="true"></canvas>
@@ -33,9 +33,11 @@
     <h1 id="visitor-title">Detected details</h1>
     <p id="visitor-status" role="status">Reading…</p>
     <dl id="detected-details" class="visitor-list"></dl>
+    <button id="test-speed" type="button" hidden>Test speed · 1 MiB</button>
     <noscript>Enable JavaScript to display browser details.</noscript>
   </main>
   <script src="script.js"></script>
-  <script src="visitor.js?v=2" defer></script>
+  <script src="visitor-live.js?v=1" defer></script>
+  <script src="visitor.js?v=3" defer></script>
 </body>
 </html>
