@@ -1,5 +1,6 @@
 body { height: auto; min-height: 100vh; overflow: auto; }
-.visitor { position: relative; z-index: 5; max-width: 620px; margin: 32px 24px 64px; padding: 20px 24px; background: rgba(2,8,4,.88); font: 12px/1.8 var(--font-mono); }
+.visitor { position: relative; z-index: 5; isolation: isolate; max-width: 620px; margin: 32px 24px 64px; padding: 20px 24px; font: 12px/1.8 var(--font-mono); }
+.visitor::before { content: ''; position: absolute; z-index: -1; inset: -6px -14px; border-radius: 36px; background: linear-gradient(90deg, rgba(2,8,4,.82), rgba(2,8,4,.72) 65%, rgba(2,8,4,.25) 92%, transparent); filter: blur(22px); pointer-events: none; }
 .visitor h1 { margin: 0 0 18px; color: var(--green-bright); font: 500 14px/1.5 var(--font-display); letter-spacing: .04em; }
 #visitor-status { color: #a8c0aa; margin: 0 0 12px; }
 .visitor-list { margin: 0; }
