@@ -5,10 +5,11 @@ link opens `/private/`. Cloudflare Access displays a Google sign-in screen and
 allows only approved accounts. A small Cloudflare Worker verifies that session
 again before it renders the private index.
 
-**The code alone does not enable Google sign-in. Complete the Cloudflare and
-Google setup below, deploy the Worker, and verify it before merging the homepage
-link change.** Until setup is complete, the Worker denies access. No Google
-credentials, approved email addresses, or real private links are in this repo.
+The live Google login and Worker were configured and tested before the homepage
+link was published. The steps below document how to maintain or recreate that
+setup. Future Worker code updates require a direct Wrangler deployment;
+automatic Git builds are not connected. No Google credentials, approved email
+addresses, or real private links are in this repo.
 
 ## How it works
 
@@ -75,9 +76,15 @@ The wildcard path alone does not cover the slashless `/private` path. Keep the
 public root outside the application. Check that no more-specific Access
 application or Worker route overrides these paths.
 
-Choose an **8 hour** application session duration. Under login methods, disable
+Choose a **6 hour** application session duration. Under login methods, disable
 accepting all identity providers and select **Google only**. Leave the login
 method selection screen enabled if you want visitors to see the Google button.
+
+Under Additional settings, enable **HTTP Only** and **Binding Cookie**, and set
+**Same Site Attribute** to **Lax**. Leave **Enforce cookie path attribute** off:
+the sign-out endpoint is outside `/private`, so it must receive the application's
+cookie to clear the session. If changing this setting after testing, remove old
+path-scoped test cookies from that browser to avoid duplicate-cookie redirects.
 
 Create an **Allow** policy with:
 
@@ -116,6 +123,11 @@ review that before proceeding.
 Set these values as **Worker secrets**, either in the Worker dashboard under
 Settings → Variables and Secrets, or using the commands below. Enter the values
 at the prompts; do not put values into command-line history.
+
+The dashboard may create a new version when secrets change without deploying
+it. In **Deployments → Version History**, promote the version containing the
+updated secrets to 100%, then verify the live page. This also applies when
+changing approved emails or private links later.
 
 | Secret | Required value |
 | --- | --- |
