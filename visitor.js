@@ -18,17 +18,21 @@
   }
   const status = document.getElementById('visitor-status');
   const rows = [];
+  const cells = new Map();
   const safe = read => { try { return read(); } catch { return undefined; } };
   const media = query => safe(() => matchMedia(query).matches) === true;
   const units = (value, unit) => typeof value === 'number' && Number.isFinite(value) ? value + ' ' + unit : null;
   const positive = value => typeof value === 'number' && value > 0 ? value : null;
   function add(label, value) {
     if (value === undefined || value === null || value === '' || value === false) return;
-    rows.push([label, String(value)]);
+    const row = rows.find(item => item[0] === label);
+    if (row) row[1] = String(value);
+    else rows.push([label, String(value)]);
+    if (cells.has(label) && cells.get(label).textContent !== String(value)) cells.get(label).textContent = String(value);
   }
   function render() {
-    const fragment = document.createDocumentFragment();
     for (const [label, value] of rows) {
+      if (cells.has(label)) { if (cells.get(label).textContent !== value) cells.get(label).textContent = value; continue; }
       const row = document.createElement('div');
       row.className = 'visitor-row';
       const term = document.createElement('dt');
@@ -36,9 +40,11 @@
       term.textContent = label;
       detail.textContent = value;
       row.append(term, detail);
-      fragment.append(row);
+      cells.set(label, detail);
+      const index = rows.findIndex(item => item[0] === label);
+      const next = rows.slice(index + 1).find(item => cells.has(item[0]));
+      list.insertBefore(row, next ? cells.get(next[0]).parentElement : null);
     }
-    list.replaceChildren(fragment);
   }
   function browserDetails() {
     const ua = safe(() => navigator.userAgent);
@@ -114,11 +120,21 @@
       }
       if (/^(h2|h3|http\/[\d.]+)$/i.test(fields.http || '')) network.push(['HTTP protocol', fields.http]);
       if (/^TLSv[\d.]+$/.test(fields.tls || '')) network.push(['TLS version', fields.tls]);
-      rows.unshift(...network);
+      for (const [label, value] of network.reverse()) {
+        const index = rows.findIndex(item => item[0] === label);
+        if (index >= 0) rows.splice(index, 1);
+        rows.unshift([label, value]);
+      }
     } catch { /* Unavailable readings are simply omitted. */ }
     finally { clearTimeout(timeout); }
   }
   safe(browserDetails);
   render();
   networkDetails().finally(() => { render(); if (status) status.hidden = true; });
+  window.dispatchEvent(new CustomEvent('visitor-ready', { detail: { add, render, remove(label) {
+    const index = rows.findIndex(item => item[0] === label);
+    if (index >= 0) rows.splice(index, 1);
+    cells.get(label)?.parentElement.remove();
+    cells.delete(label);
+  } } }));
 })();
