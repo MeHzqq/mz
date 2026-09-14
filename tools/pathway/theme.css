@@ -1,0 +1,149 @@
+/* Appearance is independent of design settings and printable reports. */
+:root {
+  color-scheme: light;
+  --status-text: #1b3446;
+  --status-warning: #984f18;
+  --chart-line: #078e86;
+  --chart-baseline: #c8d6df;
+}
+.header-actions { flex-wrap: wrap; gap: 8px; }
+.app-header { height: auto; min-height: 92px; padding-top: 14px; padding-bottom: 14px; }
+.identity { flex-shrink: 0; }
+.theme-toggle { gap: 8px; white-space: nowrap; }
+.theme-track {
+  width: 28px; height: 16px; border-radius: 10px; background: #697b8d;
+  display: inline-flex; align-items: center; padding: 2px; flex-shrink: 0;
+}
+.theme-track::after {
+  content: ''; width: 12px; height: 12px; border-radius: 50%; background: #fff;
+}
+.theme-toggle[aria-checked="true"] .theme-track { background: #5de4da; }
+.theme-toggle[aria-checked="true"] .theme-track::after {
+  transform: translateX(12px); background: #102333;
+}
+@media (max-width: 700px) {
+  .app-header { min-height: 100px; }
+  .header-actions { gap: 6px; }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: #e3edf4;
+  background: #0c1621;
+  --ink: #e3edf4;
+  --line: #344756;
+  --cyan: #5de4da;
+  --muted: #adbfcd;
+  --surface: #142331;
+  --raised: #1b2e3d;
+  --field: #0f1e2a;
+  --accent-text: #85e2d7;
+  --accent-surface: #173832;
+  --status-text: #dce8f0;
+  --status-warning: #ffca90;
+  --chart-line: #5de4da;
+  --chart-baseline: #526b7d;
+}
+[data-theme="dark"] .app-header,
+[data-theme="dark"] .sidebar { background: var(--surface); }
+[data-theme="dark"] .mark { background: #203e4c; }
+[data-theme="dark"] .button {
+  background: var(--raised); border-color: #496071; color: var(--ink);
+}
+[data-theme="dark"] .button:hover { background: #294252; }
+[data-theme="dark"] .primary {
+  background: #5de4da; color: #0c282d; border-color: #5de4da;
+}
+[data-theme="dark"] .primary:hover { background: #8befdf; border-color: #8befdf; }
+[data-theme="dark"] .tabs button { color: var(--muted); }
+[data-theme="dark"] .tabs button[aria-selected="true"] { color: #f0fafb; }
+
+[data-theme="dark"] .identity p,
+[data-theme="dark"] .concept-tag,
+[data-theme="dark"] .field-intro,
+[data-theme="dark"] .number-wrap span,
+[data-theme="dark"] .range-labels,
+[data-theme="dark"] .stiffness-readout span,
+[data-theme="dark"] .small-note,
+[data-theme="dark"] .check,
+[data-theme="dark"] .analysis-head,
+[data-theme="dark"] .analysis p,
+[data-theme="dark"] .result-status #solver-detail,
+[data-theme="dark"] .metric label,
+[data-theme="dark"] .metric small,
+[data-theme="dark"] .model-note,
+[data-theme="dark"] .export-option span,
+[data-theme="dark"] .measurement-input span,
+[data-theme="dark"] dialog p { color: var(--muted); }
+[data-theme="dark"] .measurement-field { color: var(--ink); }
+[data-theme="dark"] a,
+[data-theme="dark"] .text-button { color: var(--accent-text); }
+
+[data-theme="dark"] .wide-input,
+[data-theme="dark"] fieldset input,
+[data-theme="dark"] .number-wrap input,
+[data-theme="dark"] .measurement-input input,
+[data-theme="dark"] .analysis-head select,
+[data-theme="dark"] #station-spacing {
+  color: var(--ink); background: var(--field); border-color: #496071;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: #94aabc; opacity: 1; }
+[data-theme="dark"] input[type="range"],
+[data-theme="dark"] input[type="checkbox"] { accent-color: #5de4da; }
+
+[data-theme="dark"] .notice,
+[data-theme="dark"] .material-use,
+[data-theme="dark"] .section-source,
+[data-theme="dark"] .reference-card,
+[data-theme="dark"] .reference-result {
+  background: var(--accent-surface); color: #c2e3db; border-color: #3b7068;
+}
+[data-theme="dark"] .reference-evidence strong { color: var(--accent-text); }
+[data-theme="dark"] .material-result {
+  background: var(--surface); border-color: var(--line);
+}
+[data-theme="dark"] .material-result th,
+[data-theme="dark"] .material-result td,
+[data-theme="dark"] .section-editor,
+[data-theme="dark"] .section-properties,
+[data-theme="dark"] .property-list div,
+[data-theme="dark"] .steel-insert,
+[data-theme="dark"] .obstacle,
+[data-theme="dark"] .comparison,
+[data-theme="dark"] fieldset { border-color: var(--line); }
+[data-theme="dark"] .steel-result { border-color: #806b47; }
+[data-theme="dark"] #flip-profile[aria-pressed="true"] {
+  background: var(--accent-surface); border-color: #65c6b6; color: #a4f0e2;
+}
+[data-theme="dark"] .error,
+[data-theme="dark"] .issue { background: #402c20; color: #ffca90; }
+[data-theme="dark"] .analysis .check-result { color: #85e2c9; }
+[data-theme="dark"] .analysis .check-result.caution,
+[data-theme="dark"] .material-result .caution { color: #ffca90; }
+
+[data-theme="dark"] dialog { background: var(--surface); border-color: #496071; }
+[data-theme="dark"] dialog::backdrop { background: #020a12b3; }
+[data-theme="dark"] .close-button { color: var(--muted); }
+[data-theme="dark"] .export-option { background: var(--raised); border-color: var(--line); }
+[data-theme="dark"] .export-option:hover { border-color: #5de4da; }
+
+[data-theme="dark"] .calculations-panel { background: var(--surface); border-color: #3b625f; }
+[data-theme="dark"] .calculations-panel > summary {
+  background: var(--accent-surface); color: var(--accent-text);
+}
+[data-theme="dark"] .calculations-panel[open] > summary { border-color: #3b625f; }
+[data-theme="dark"] .math-intro strong { color: var(--accent-text); }
+[data-theme="dark"] .analysis .calculations-panel p { color: var(--muted); }
+[data-theme="dark"] .math-station-card { background: var(--field); border-color: var(--line); }
+[data-theme="dark"] .math-equation { background: #142f30; border-color: #52bfb0; }
+[data-theme="dark"] .math-working { color: var(--accent-text); }
+[data-theme="dark"] .math-detail,
+[data-theme="dark"] .math-table-scroll th,
+[data-theme="dark"] .math-table-scroll td { border-color: var(--line); }
+[data-theme="dark"] .math-table-scroll th { background: var(--raised); color: #d4e4ed; }
+
+[data-theme="dark"] :is(button, input, select, textarea, summary, a, [tabindex]):focus-visible {
+  outline: 2px solid #5de4da; outline-offset: 3px;
+}
+[data-theme="dark"] ::selection { background: #5de4da; color: #0c282d; }
