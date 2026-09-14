@@ -147,3 +147,11 @@
   outline: 2px solid #5de4da; outline-offset: 3px;
 }
 [data-theme="dark"] ::selection { background: #5de4da; color: #0c282d; }
+
+/* The existing identity icon opens the profile-label controls. */
+#profile-names-open { border: 0; padding: 0; flex-shrink: 0; }
+#profile-names-open:hover { box-shadow: 0 0 0 2px #29998c; }
+#profile-names-open:focus-visible { outline: 2px solid #078e86; outline-offset: 4px; }
+[data-theme="dark"] #profile-names-open:focus-visible { outline-color: #5de4da; }
+#profile-names-dialog { max-width: 430px; }
+#profile-names-error { margin-bottom: 16px; }
