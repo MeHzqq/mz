@@ -117,9 +117,9 @@ export function initProfileVisibility(onChange) {
   const form = document.getElementById('profile-names-form');
   const code = document.getElementById('profile-names-code');
   const error = document.getElementById('profile-names-error');
-  const state = document.getElementById('profile-names-state');
+  const heading = document.getElementById('profile-names-title');
   const lockButton = document.getElementById('profile-names-lock');
-  if (![openButton, dialog, form, code, error, state, lockButton].every(Boolean)) {
+  if (![openButton, dialog, form, code, error, heading, lockButton].every(Boolean)) {
     onVisibilityChange(unlocked);
     return;
   }
@@ -128,9 +128,9 @@ export function initProfileVisibility(onChange) {
   function renderControls() {
     form.hidden = unlocked;
     lockButton.hidden = !unlocked;
-    state.textContent = unlocked ? 'Profile names are visible for this session.' : 'Profile names are hidden. Enter the code to show them for this session.';
-    openButton.setAttribute('aria-label', unlocked ? 'Profile names are visible. Open profile name settings.' : 'Profile names are hidden. Unlock profile names.');
-    openButton.title = unlocked ? 'Profile name settings' : 'Unlock profile names';
+    heading.textContent = unlocked ? 'Unlocked' : 'Enter code';
+    openButton.setAttribute('aria-label', unlocked ? 'Tool unlocked. Open lock settings.' : 'Enter code to unlock tool.');
+    openButton.title = unlocked ? 'Lock settings' : 'Enter code';
     openButton.setAttribute('aria-haspopup', 'dialog');
     openButton.setAttribute('aria-controls', dialog.id);
     openButton.setAttribute('aria-expanded', String(dialog.open));
