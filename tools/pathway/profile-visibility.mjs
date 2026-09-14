@@ -125,6 +125,10 @@ export function initProfileVisibility(onChange) {
   }
   initialized = true;
 
+  document.addEventListener('contextmenu', event => {
+    if (!unlocked) event.preventDefault();
+  });
+
   function renderControls() {
     form.hidden = unlocked;
     lockButton.hidden = !unlocked;
