@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { handleRequest } from '../src/worker.mjs';
+import { PATHWAY_ROOT, PATHWAY_FILES } from '../src/pathway.mjs';
 
 const issuer = 'https://mehz-test.cloudflareaccess.com';
 const audience = 'a'.repeat(64);
@@ -235,12 +236,272 @@ test('unsupported methods return 405 and the supported method list', async () =>
   }
 });
 
-test('an authorized account can open an empty index', async () => {
+test('an authorized account sees the built-in Pathway link when no secret links are configured', async () => {
   const jwt = await token();
   for (const index of [undefined, '', '[]']) {
     const response = await handleRequest(request(jwt), { ...env, INDEX_LINKS_JSON: index }, keySetFactory);
     assert.equal(response.status, 200);
-    assert.match(await response.text(), /No links added yet\./);
+    const body = await response.text();
+    assert.ok(body.includes(`${env.SITE_ORIGIN}${PATHWAY_ROOT}`));
+    assert.match(body, /Pathway Designer/);
+    assert.doesNotMatch(body, /No links added yet\./);
+  }
+});
+
+const assetMarker = 'PRIVATE_PATHWAY_ASSET_TEST_MARKER';
+const representativeToolPaths = [PATHWAY_ROOT, ...['app.mjs', 'solver.mjs', 'worker.mjs', 'style.css'].map(file => PATHWAY_ROOT + file)];
+const assetBody = file => `${assetMarker}:${file}`;
+
+function assetFixture(overrides = {}) {
+  const calls = [];
+  const ASSETS = {
+    async fetch(input, init) {
+      const assetRequest = input instanceof Request ? input : new Request(input, init);
+      calls.push(assetRequest);
+      const file = new URL(assetRequest.url).pathname.split('/').at(-1);
+      assert.ok(PATHWAY_FILES.includes(file), `Only an allowlisted asset should reach the binding: ${file}`);
+      return new Response(assetRequest.method === 'HEAD' ? null : assetBody(file), {
+        headers: {
+          'Content-Type': file.endsWith('.css') ? 'text/css' : file.endsWith('.html') ? 'text/html' : 'text/javascript',
+          'Cache-Control': 'public, max-age=86400',
+          'CDN-Cache-Control': 'public, max-age=86400',
+          'Cloudflare-CDN-Cache-Control': 'public, max-age=86400',
+          'Access-Control-Allow-Origin': '*',
+          ETag: '"asset-test-etag"',
+        },
+      });
+    },
+  };
+  return { calls, settings: { ...env, ASSETS, ...overrides } };
+}
+
+function assertPrivateAssetHeaders(response, file) {
+  assert.match(response.headers.get('Cache-Control'), /private, no-store/);
+  assert.equal(response.headers.get('CDN-Cache-Control'), 'no-store');
+  assert.equal(response.headers.get('Cloudflare-CDN-Cache-Control'), 'no-store');
+  assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff');
+  assert.equal(response.headers.get('X-Frame-Options'), 'DENY');
+  assert.equal(response.headers.get('Referrer-Policy'), 'no-referrer');
+  assert.equal(response.headers.get('X-Robots-Tag'), 'noindex, nofollow, noarchive');
+  assert.equal(response.headers.get('Access-Control-Allow-Origin'), null);
+  assert.equal(response.headers.get('ETag'), null);
+  const type = response.headers.get('Content-Type');
+  assert.match(type, file.endsWith('.html') ? /^text\/html\b/ : file.endsWith('.css') ? /^text\/css\b/ : /^(?:text|application)\/javascript\b/);
+  const policy = response.headers.get('Content-Security-Policy');
+  assert.match(policy, /(?:^|;)\s*default-src 'none'(?:;|$)/);
+  assert.match(policy, /(?:^|;)\s*script-src [^;]*'self'/);
+  assert.match(policy, /(?:^|;)\s*worker-src [^;]*'self'/);
+  assert.match(policy, /(?:^|;)\s*frame-ancestors 'none'(?:;|$)/);
+  assert.doesNotMatch(policy, /script-src[^;]*'unsafe-(?:inline|eval)'/);
+}
+
+async function rejectTool(response, status) {
+  const body = await rejection(response, status);
+  assert.ok(!body.includes(assetMarker), 'Rejected request must not expose tool bytes');
+}
+
+test('every declared Pathway asset is authenticated, has its own MIME type, and is never publicly cached', async () => {
+  const jwt = await token();
+  for (const file of PATHWAY_FILES) {
+    const fixture = assetFixture();
+    const response = await handleRequest(request(jwt, { path: PATHWAY_ROOT + file }), fixture.settings, keySetFactory);
+    assert.equal(response.status, 200, file);
+    assert.equal(await response.text(), assetBody(file), file);
+    assertPrivateAssetHeaders(response, file);
+    assert.equal(fixture.calls.length, 1);
+    assert.equal(new URL(fixture.calls[0].url).pathname, PATHWAY_ROOT + file);
+  }
+});
+
+test('the authenticated tool directory maps internally to index.html without an asset redirect', async () => {
+  const fixture = assetFixture();
+  const response = await handleRequest(request(await token(), { path: PATHWAY_ROOT }), fixture.settings, keySetFactory);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Location'), null);
+  assert.equal(await response.text(), assetBody('index.html'));
+  assert.equal(new URL(fixture.calls[0].url).pathname, PATHWAY_ROOT + 'index.html');
+  assertPrivateAssetHeaders(response, 'index.html');
+});
+
+test('HTML, app modules, solver modules, worker scripts and CSS reject invalid or unapproved identities before fetching assets', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const cases = [
+    ['missing assertion', undefined, 401],
+    ['malformed assertion', 'not-a-jwt', 401],
+    ['oversized assertion', 'x'.repeat(16385), 401],
+    ['unapproved email', await token({ email: 'outsider@example.com' }), 403],
+    ['expired session', await token({ iat: now - 600, exp: now - 120 }), 401],
+    ['wrong audience', await token({ aud: 'b'.repeat(64) }), 401],
+    ['wrong issuer', await token({ iss: 'https://other.cloudflareaccess.com' }), 401],
+    ['wrong signing key', await token({}, unrelatedKeys.privateKey), 401],
+  ];
+  for (const path of representativeToolPaths) {
+    for (const [name, jwt, status] of cases) {
+      const fixture = assetFixture();
+      await rejectTool(await handleRequest(request(jwt, {
+        path, headers: { 'Cf-Access-Authenticated-User-Email': allowedEmail },
+      }), fixture.settings, keySetFactory), status);
+      assert.equal(fixture.calls.length, 0, `${name}: ${path}`);
+    }
+  }
+});
+
+test('removing an account immediately blocks later module fetches with its existing token', async () => {
+  const fixture = assetFixture();
+  const jwt = await token();
+  const path = PATHWAY_ROOT + 'solver.mjs';
+  assert.equal((await handleRequest(request(jwt, { path }), fixture.settings, keySetFactory)).status, 200);
+  fixture.settings.ALLOWED_EMAILS = 'second@example.com';
+  await rejectTool(await handleRequest(request(jwt, { path }), fixture.settings, keySetFactory), 403);
+  assert.equal(fixture.calls.length, 1);
+});
+
+test('alternate origins cannot obtain any representative Pathway resource', async () => {
+  const jwt = await token();
+  for (const origin of ['http://mehz.org', 'https://www.mehz.org', 'https://mehz-private-index.example.workers.dev', 'https://mehz.org:8443', 'https://mehzqq.github.io']) {
+    for (const path of representativeToolPaths) {
+      const fixture = assetFixture();
+      await rejectTool(await handleRequest(request(jwt, { path, origin }), fixture.settings, keySetFactory), 404);
+      assert.equal(fixture.calls.length, 0);
+    }
+  }
+});
+
+test('unknown, encoded, case-changed and traversal-like tool paths never reach the asset store', async () => {
+  const jwt = await token();
+  const paths = [
+    '/tools/pathway/app.mjs', '/private-tools/pathway/app.mjs', '/private/tools/pathway-extra/app.mjs',
+    PATHWAY_ROOT + 'missing.mjs', PATHWAY_ROOT + 'app.mjs.map', PATHWAY_ROOT + '.env',
+    PATHWAY_ROOT + 'App.mjs', PATHWAY_ROOT + 'app.mjs/', PATHWAY_ROOT + 'nested/app.mjs',
+    PATHWAY_ROOT + '/app.mjs', PATHWAY_ROOT + '%61pp.mjs', PATHWAY_ROOT + 'app.mjs%00',
+    '/private/tools/pathway%2Fapp.mjs', '/private/tools/pathway%5Capp.mjs',
+    '/private/tools/pathway%252Fapp.mjs', PATHWAY_ROOT + '../app.mjs',
+    PATHWAY_ROOT + '%2e%2e/solver.mjs', PATHWAY_ROOT + '%252e%252e/solver.mjs',
+  ];
+  for (const path of paths) {
+    const fixture = assetFixture();
+    await rejectTool(await handleRequest(request(jwt, { path }), fixture.settings, keySetFactory), 404);
+    assert.equal(fixture.calls.length, 0, path);
+  }
+});
+
+test('slashless Pathway URLs redirect only after authorization and HEAD redirects have no body', async () => {
+  const path = PATHWAY_ROOT.slice(0, -1) + '?mode=review';
+  const fixture = assetFixture();
+  await rejectTool(await handleRequest(request(undefined, { path }), fixture.settings, keySetFactory), 401);
+  await rejectTool(await handleRequest(request(await token({ email: 'outsider@example.com' }), { path }), fixture.settings, keySetFactory), 403);
+  for (const method of ['GET', 'HEAD']) {
+    const response = await handleRequest(request(await token(), { path, method }), fixture.settings, keySetFactory);
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('Location'), PATHWAY_ROOT + '?mode=review');
+    assert.match(response.headers.get('Cache-Control'), /no-store/);
+    if (method === 'HEAD') assert.equal(await response.text(), '');
+  }
+  assert.equal(fixture.calls.length, 0);
+});
+
+test('tool HEAD requests authenticate normally and expose no body', async () => {
+  const jwt = await token();
+  for (const path of representativeToolPaths) {
+    const fixture = assetFixture();
+    const accepted = await handleRequest(request(jwt, { path, method: 'HEAD' }), fixture.settings, keySetFactory);
+    assert.equal(accepted.status, 200);
+    assert.equal(await accepted.text(), '');
+    assertPrivateAssetHeaders(accepted, path === PATHWAY_ROOT ? 'index.html' : path.split('/').at(-1));
+    assert.equal(fixture.calls[0].method, 'HEAD');
+    const rejected = await handleRequest(request(undefined, { path, method: 'HEAD' }), fixture.settings, keySetFactory);
+    await rejectTool(rejected, 401);
+    assert.equal(fixture.calls.length, 1);
+  }
+});
+
+test('only GET and HEAD can reach tool assets', async () => {
+  const jwt = await token();
+  for (const path of representativeToolPaths) {
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+      const fixture = assetFixture();
+      const response = await handleRequest(request(jwt, { path, method }), fixture.settings, keySetFactory);
+      await rejectTool(response, 405);
+      assert.equal(response.headers.get('Allow'), 'GET, HEAD');
+      assert.equal(fixture.calls.length, 0);
+    }
+  }
+});
+
+test('session, identity, range and conditional headers plus query strings never reach the asset binding', async () => {
+  const fixture = assetFixture();
+  const response = await handleRequest(request(await token(), {
+    path: PATHWAY_ROOT + 'worker.mjs?cache=anything&token=do-not-forward',
+    headers: {
+      Cookie: 'CF_Authorization=do-not-forward',
+      Authorization: 'Bearer do-not-forward',
+      'Cf-Access-Authenticated-User-Email': allowedEmail,
+      Range: 'bytes=0-10',
+      'If-None-Match': '"asset-test-etag"',
+      'If-Modified-Since': 'Wed, 21 Oct 2026 07:28:00 GMT',
+    },
+  }), fixture.settings, keySetFactory);
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), assetBody('worker.mjs'));
+  assert.equal(new URL(fixture.calls[0].url).search, '');
+  assert.deepEqual([...fixture.calls[0].headers], []);
+});
+
+test('missing configuration or signing-key failures cannot fetch tool assets', async () => {
+  const jwt = await token();
+  for (const field of ['ACCESS_TEAM_DOMAIN', 'ACCESS_AUD', 'SITE_ORIGIN', 'ALLOWED_EMAILS']) {
+    const fixture = assetFixture(); delete fixture.settings[field];
+    await rejectTool(await handleRequest(request(jwt, { path: PATHWAY_ROOT }), fixture.settings, keySetFactory), 503);
+    assert.equal(fixture.calls.length, 0);
+  }
+  const fixture = assetFixture();
+  await rejectTool(await handleRequest(request(jwt, { path: PATHWAY_ROOT }), fixture.settings, () => { throw new Error('Unavailable signing keys'); }), 401);
+  assert.equal(fixture.calls.length, 0);
+});
+
+test('asset binding absence, exceptions, redirects and non-success statuses fail closed without forwarding bodies', async () => {
+  const jwt = await token();
+  const failures = [
+    ['absent binding', undefined, 503],
+    ['throwing binding', { fetch() { throw new Error(assetMarker); } }, 503],
+    ...[206, 301, 302, 304, 403, 404, 500].map(status => [
+      'asset status ' + status,
+      { fetch() { return new Response(status === 304 ? null : assetMarker, { status, headers: { Location: 'https://public.example/tool', 'Cache-Control': 'public, max-age=1000' } }); } },
+      status === 404 ? 404 : 503,
+    ]),
+  ];
+  for (const [name, ASSETS, status] of failures) {
+    for (const method of ['GET', 'HEAD']) {
+      const response = await handleRequest(request(jwt, { path: PATHWAY_ROOT + 'app.mjs', method }), { ...env, ASSETS }, keySetFactory);
+      const body = await rejection(response, status);
+      assert.ok(!body.includes(assetMarker), name);
+      assert.equal(response.headers.get('Location'), null, name);
+      if (method === 'HEAD') assert.equal(body, '', name);
+    }
+  }
+});
+
+test('asset access is independent of an invalid private-index links secret', async () => {
+  const fixture = assetFixture({ INDEX_LINKS_JSON: '{broken' });
+  const response = await handleRequest(request(await token(), { path: PATHWAY_ROOT }), fixture.settings, keySetFactory);
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), assetBody('index.html'));
+});
+
+test('the private index preserves configured destinations and avoids adding duplicate Pathway links', async () => {
+  const jwt = await token();
+  for (const existingToolUrl of [null, PATHWAY_ROOT, PATHWAY_ROOT.slice(0, -1), PATHWAY_ROOT + 'index.html', env.SITE_ORIGIN + PATHWAY_ROOT]) {
+    const links = [{ title: privateTitle, url: privateUrl }];
+    if (existingToolUrl) links.push({ title: 'Existing private tool entry', url: existingToolUrl });
+    const response = await handleRequest(request(jwt), { ...env, INDEX_LINKS_JSON: JSON.stringify(links) }, keySetFactory);
+    assert.equal(response.status, 200);
+    const body = await response.text();
+    assert.ok(body.includes(privateTitle));
+    assert.ok(body.includes(privateUrl));
+    const destinations = [...body.matchAll(/href="([^"]+)"/g)].map(match => new URL(match[1], env.SITE_ORIGIN));
+    const toolLinks = destinations.filter(url => url.origin === env.SITE_ORIGIN && [PATHWAY_ROOT, PATHWAY_ROOT.slice(0, -1), PATHWAY_ROOT + 'index.html'].includes(url.pathname));
+    assert.equal(toolLinks.length, 1, String(existingToolUrl));
+    if (existingToolUrl) assert.ok(body.includes('Existing private tool entry'));
   }
 });
 

@@ -1,0 +1,6 @@
+# Only Cloudflare Workers may serve the private tool. Do not publish its source
+# or asset tree through the GitHub Pages origin.
+exclude:
+  - private-worker
+  - visitor-worker
+  - README.md

@@ -3,13 +3,15 @@
 The homepage is the existing static GitHub Pages site. Its top-left `mehz.org`
 link opens `/private/`. Cloudflare Access displays a Google sign-in screen and
 allows only approved accounts. A small Cloudflare Worker verifies that session
-again before it renders the private index.
+again before it renders the private index or serves Pathway Designer at
+`/private/tools/pathway/`.
 
 The live Google login and Worker were configured and tested before the homepage
 link was published. The steps below document how to maintain or recreate that
 setup. Future Worker code updates require a direct Wrangler deployment;
 automatic Git builds are not connected. No Google credentials, approved email
-addresses, or real private links are in this repo.
+addresses, or configured private-link secrets are in this repo. The built-in
+Pathway destination and its source code are in the repository.
 
 ## How it works
 
@@ -18,13 +20,69 @@ addresses, or real private links are in this repo.
 3. The Access policy checks that Google authenticated an approved email.
 4. The Worker checks the signed Access token, the intended application, its
    lifetime, and a second exact email allowlist.
-5. The Worker renders the index with the signed-in email, private links and a
-   **Sign out** link. Later visits reuse the Access session until it expires.
+5. The Worker renders the index with the signed-in email, configured private
+   links, a built-in **Pathway Designer** link and a **Sign out** link. Later
+   visits reuse the Access session until it expires.
+6. Opening Pathway Designer checks authorization again for every HTML,
+   stylesheet, JavaScript module and module-worker request, including direct
+   file URLs and `HEAD` requests.
 
 The public root and Matrix animation stay on GitHub Pages. Only `/private*`
-routes to the Worker, which implements `/private` and `/private/`; other paths
-return 404. Private responses are never cached. There is no browser-side login
-flag or unauthenticated private JSON endpoint.
+routes to the Worker. It implements `/private`, `/private/`, the Pathway root
+and the explicit file list in `private-worker/src/pathway.mjs`; other paths
+return 404. Private responses use `no-store` headers. There is no browser-side
+login flag or unauthenticated private JSON endpoint.
+
+Pathway files live in `private-worker/_assets/private/tools/pathway/` and are
+uploaded with the Worker through its `ASSETS` binding. `run_worker_first: true`
+in `private-worker/wrangler.jsonc` ensures asset requests run through the
+authorization code first. Keep it enabled, with `html_handling` and
+`not_found_handling` set to `none`: missing files return 404, asset failures
+return 503, and neither case falls back to GitHub Pages or another tool page.
+Keep `workers_dev` and `preview_urls` disabled.
+
+The root `_config.yml` excludes `private-worker` from GitHub Pages; the
+`_assets` directory also starts with an underscore so Jekyll omits it by
+default. Preserve both protections, and do not replace the Pages build with a
+raw repository upload that ignores these exclusions. The former
+`/tools/pathway/` location contains only a move notice and browser redirect.
+
+## Moving Pathway behind the existing login
+
+Use this order when deploying the migration or maintaining its two delivery
+paths. The account setup below remains applicable.
+
+1. Confirm the existing Access application still covers both `/private` and
+   `/private/*`, with the same AUD and approved-email policy. Preserve the
+   Worker's existing `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `ALLOWED_EMAILS` and
+   optional `INDEX_LINKS_JSON` secrets; this migration does not require replacing
+   them or creating a new Access application.
+2. From `private-worker`, run `pnpm install --frozen-lockfile`, `pnpm test` and
+   `pnpm run build`, then deploy with `pnpm run deploy`. This publishes the
+   authenticated asset bundle and index link together. Verify the protected
+   tool and a direct module URL before publishing the Pages changes.
+3. Publish the GitHub Pages changes together: `_config.yml` exclusions, removal
+   of the former public tool assets, and the redirect-only
+   `tools/pathway/index.html`. Wait for the Pages deployment to finish. The old
+   public tool remains available until this removal has reached the public
+   origin and any cached copies have expired or been purged.
+4. Verify that `/tools/pathway/` only redirects to the private location, and
+   that old URLs such as `/tools/pathway/app.mjs`, `/tools/pathway/solver.mjs`
+   and `/tools/pathway/worker.mjs` return no tool content. Check both
+   `mehz.org` and the direct GitHub Pages origin. Also verify that neither
+   `/private-worker/_assets/private/tools/pathway/index.html` nor
+   `/private/tools/pathway/index.html` exposes the tool at the Pages origin.
+   If Cloudflare still serves an old public asset, purge that cached URL and
+   repeat the check.
+5. In a fresh session, confirm the new tool page and direct asset URLs require
+   login. An approved account must load the tool and its module worker; an
+   unapproved account must be denied. Confirm configured directory links,
+   sign-out, the public homepage and Matrix animation still work.
+
+Website authentication does not make this public repository or its Git history
+confidential. Pathway was previously public, and this migration cannot retract
+source or files already obtained. Keep credentials and confidential content
+out of the repository even when their website route requires login.
 
 ## One-time account setup
 
@@ -115,10 +173,12 @@ pnpm exec wrangler login
 pnpm run deploy
 ```
 
-`build` is a dry run and does not deploy. `deploy` publishes the Worker and
-attaches the route in `wrangler.jsonc`. Initially it returns 503 until its
-configuration is present. If Cloudflare reports a quota or paid-plan prompt,
-review that before proceeding.
+`build` is a dry run and does not deploy. `deploy` publishes the Worker and its
+asset bundle, and attaches the route in `wrangler.jsonc`. For a new setup it
+returns 503 until its configuration is present. For an existing setup, preserve
+the current secrets and Access application rather than repeating account
+creation. If Cloudflare reports a quota or paid-plan prompt, review that before
+proceeding.
 
 Set these values as **Worker secrets**, either in the Worker dashboard under
 Settings → Variables and Secrets, or using the commands below. Enter the values
@@ -134,7 +194,7 @@ changing approved emails or private links later.
 | `ACCESS_TEAM_DOMAIN` | `https://your-team.cloudflareaccess.com` |
 | `ACCESS_AUD` | The Access application's AUD tag |
 | `ALLOWED_EMAILS` | Comma-separated approved email addresses, matching the Access policy |
-| `INDEX_LINKS_JSON` | Optional JSON array of links; omit it or use `[]` for an empty index |
+| `INDEX_LINKS_JSON` | Optional JSON array of additional links; omit it or use `[]` to show only the built-in Pathway Designer link |
 
 ```sh
 pnpm exec wrangler secret put ACCESS_TEAM_DOMAIN
@@ -159,7 +219,11 @@ Replace the example with your real links only in Cloudflare's secret value.
 Each entry needs `title` and `url`; `description` is optional. URLs can be HTTPS
 addresses or root-relative paths such as `/another-tool/`. Script URLs,
 protocol-relative URLs and embedded credentials are rejected. Links remain in
-the current tab. The index starts with a clear empty state when no links exist.
+the current tab. The Worker preserves configured links in their existing order
+and appends Pathway Designer unless an equivalent destination is already
+present. With no optional links, the index still shows Pathway Designer; it is
+not an empty directory. Do not overwrite an existing `INDEX_LINKS_JSON` secret
+just to add the built-in tool.
 
 Confirm that the Worker route is `mehz.org/private*`, and that **workers.dev** and
 **preview URLs** are disabled. These settings are also in `wrangler.jsonc`.
@@ -169,24 +233,29 @@ References: [Worker routes](https://developers.cloudflare.com/workers/configurat
 [Worker secrets](https://developers.cloudflare.com/workers/configuration/secrets/) ·
 [Access JWT verification](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
 
-### 5. Verify live behavior, then enable the homepage link
+### 5. Verify live behavior
 
-Before merging the homepage change, check the deployed `/private/` directly:
+For a new setup, check the deployed `/private/` before enabling the homepage
+link. For the Pathway migration, also follow the deployment order above:
 
 - In a fresh browser session, it shows the Google login screen.
 - An approved Google account reaches the index; an unapproved account is denied.
 - `/private` is also protected and redirects to `/private/` after authorization.
 - Opening the URL directly and adding query parameters still require login.
+- `/private/tools/pathway/` and every file in `PATHWAY_FILES` require an
+  approved session. Test direct module and stylesheet URLs as well as the page;
+  a successful login screen alone does not verify asset protection.
 - Sign out clears site access. Cloudflare notes revocation can take about
   20–30 seconds; this also signs out the user's other Cloudflare Access apps,
   but does not sign them out of Google itself.
 - The public homepage and Matrix animation remain accessible without login.
-- Direct GitHub Pages requests have no private index or private links to return.
+- Direct GitHub Pages requests have no private index or private tool asset tree
+  to return, and the old public Pathway module URLs no longer serve the tool.
 - Check the public repository contains no real emails, client secret or private
   link data. Keep any future private content out of the Pages publishing source.
 
-Once these checks pass, merge the homepage link change. The button then opens
-the working protected index.
+For a new setup, once these checks pass, merge the homepage link change. The
+button then opens the working protected index.
 
 ## Updating access or links
 
@@ -196,19 +265,21 @@ their Access sessions. The Worker reads the allowlist on each request, including
 for already-issued tokens. Updating `INDEX_LINKS_JSON` changes the directory
 without publishing the links in GitHub.
 
-This protects the index and its list of links. Each linked tool needs its own
-access control if the tool itself contains private information. GitHub Pages
-and this public repository are not private storage.
+This protects the index and Pathway files served by this Worker. Other linked
+tools need their own access control if they contain private information.
+GitHub Pages and this public repository are not private storage.
 
 ## Verification and recovery
 
 `pnpm test` uses locally generated signing keys and real signed JWTs to check
 authentication, authorization, session lifetime, alternate origins, response
-caching and safe link rendering. It does not replace the live Google/Cloudflare
-checks above. `pnpm run build` bundles the actual Worker with Wrangler without
-publishing it.
+caching and safe link rendering. Private-tool checks also need to cover direct
+asset requests, the built-in link and missing-file behavior. Local checks do
+not replace the live Google/Cloudflare and Pages-origin checks above.
+`pnpm run build` bundles the actual Worker with Wrangler without publishing it.
 
 If rollout needs to be paused, change the homepage brand link back to `/`, and
 keep Access enabled while investigating the Worker. Never introduce a static
-copy of private content as a fallback. Disable the Worker route only after any
+copy of the tool or private content as a fallback, and do not restore its old
+public assets to recover the service. Disable the Worker route only after any
 private content at the underlying origin has been ruled out.

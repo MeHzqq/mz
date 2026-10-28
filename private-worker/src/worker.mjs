@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { renderPage, renderIndex, readLinks } from './page.mjs';
+import { PATHWAY_ROOT, PATHWAY_CSP, isPathwayPath, withPathwayLink } from './pathway.mjs';
 
 let cachedIssuer;
 let cachedKeys;
@@ -31,28 +32,58 @@ function configuration(env) {
   return { issuer, audience: env.ACCESS_AUD, origin: origin.origin, emails: new Set(emails) };
 }
 
-function response(request, title, content, status = 200, extraHeaders = {}) {
-  const nonce = crypto.randomUUID();
-  const headers = {
-    'Content-Type': 'text/html; charset=utf-8',
+const privateHeaders = {
     'Cache-Control': 'private, no-store, max-age=0',
     'CDN-Cache-Control': 'no-store',
     'Cloudflare-CDN-Cache-Control': 'no-store',
-    'Content-Security-Policy': `default-src 'none'; style-src 'self' 'nonce-${nonce}'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
     'Referrer-Policy': 'no-referrer',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'X-Robots-Tag': 'noindex, nofollow, noarchive',
+};
+
+function response(request, title, content, status = 200, extraHeaders = {}) {
+  const nonce = crypto.randomUUID();
+  const headers = {
+    ...privateHeaders,
+    'Content-Type': 'text/html; charset=utf-8',
+    'Content-Security-Policy': `default-src 'none'; style-src 'self' 'nonce-${nonce}'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
     ...extraHeaders,
   };
   return new Response(request.method === 'HEAD' ? null : renderPage(title, content, nonce), { status, headers });
+}
+
+async function pathwayResponse(request, env, url) {
+  if (url.pathname === PATHWAY_ROOT.slice(0, -1)) {
+    return response(request, 'Pathway Designer', '', 302, { Location: PATHWAY_ROOT + url.search });
+  }
+  try {
+    const assetUrl = new URL(url);
+    if (assetUrl.pathname === PATHWAY_ROOT) assetUrl.pathname += 'index.html';
+    assetUrl.search = '';
+    // Do not forward session tokens, cookies, ranges or conditional headers to
+    // the asset store. Authentication has already run for this exact request.
+    const asset = await env.ASSETS.fetch(new Request(assetUrl, { method: request.method }));
+    if (asset.status === 404) return response(request, 'Page not found', '<p>This page does not exist.</p>', 404);
+    if (asset.status !== 200) throw new Error('Private asset unavailable');
+    const type = assetUrl.pathname.endsWith('.html') ? 'text/html; charset=utf-8'
+      : assetUrl.pathname.endsWith('.css') ? 'text/css; charset=utf-8'
+      : 'text/javascript; charset=utf-8';
+    return new Response(request.method === 'HEAD' ? null : asset.body, {
+      status: 200,
+      headers: { ...privateHeaders, 'Content-Type': type, 'Content-Security-Policy': PATHWAY_CSP },
+    });
+  } catch {
+    return response(request, 'Temporarily unavailable', '<p>The tool could not be loaded. Please try again later.</p>', 503);
+  }
 }
 
 // keySetFactory is a test seam for real, locally signed JWTs. The deployed entry
 // point always uses Cloudflare's HTTPS signing-key endpoint, never request input.
 export async function handleRequest(request, env, keySetFactory = remoteKeys) {
   const url = new URL(request.url);
-  if (url.pathname !== '/private' && url.pathname !== '/private/') {
+  const pathway = isPathwayPath(url.pathname);
+  if (url.pathname !== '/private' && url.pathname !== '/private/' && !pathway) {
     return response(request, 'Page not found', '<p>This page does not exist.</p>', 404);
   }
   if (!['GET', 'HEAD'].includes(request.method)) {
@@ -95,14 +126,14 @@ export async function handleRequest(request, env, keySetFactory = remoteKeys) {
   if (!config.emails.has(identity.email.trim().toLowerCase())) {
     return response(request, 'Access not approved', '<p>This Google account does not have access to the private index.</p><p><a href="/cdn-cgi/access/logout">Sign out</a></p>', 403);
   }
+  if (pathway) return pathwayResponse(request, env, url);
   if (url.pathname === '/private') {
     return response(request, 'Private index', '', 302, { Location: '/private/' });
   }
 
   try {
-    // Private link titles and destinations live in a Worker secret, never in the
-    // public repository, static HTML, or a browser-side JavaScript bundle.
-    const links = readLinks(env.INDEX_LINKS_JSON, config.origin);
+    // Preserve configured private links and add the built-in authenticated tool.
+    const links = withPathwayLink(readLinks(env.INDEX_LINKS_JSON, config.origin), config.origin);
     return response(request, 'Index', renderIndex(identity.email, links));
   } catch {
     return response(request, 'Temporarily unavailable', '<p>The private index could not be loaded. Please try again later.</p>', 503);
