@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="same-origin">
+  <title>W</title>
+  <style>
+    :root{color-scheme:light;--paper:#f7f5ee;--green:#254e40;--line:#c4cdbf;--muted:#67746c}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--green);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{min-height:100vh;min-height:100svh;display:grid;place-items:center;padding:32px 24px}
+    details{width:min(100%,280px);text-align:center}summary{list-style:none;width:112px;height:112px;border:1px solid var(--green);border-radius:50%;display:grid;place-items:center;margin:auto;font:400 58px/1 Georgia,"Times New Roman",serif;cursor:pointer;user-select:none;transition:background .2s,color .2s,transform .2s}
+    summary::-webkit-details-marker{display:none}summary:hover{background:var(--green);color:var(--paper);transform:translateY(-2px)}summary:focus-visible,input:focus-visible,button:focus-visible{outline:3px solid #ae7046;outline-offset:5px}
+    form{margin:28px 0 0;display:flex;flex-direction:column;align-items:center;gap:14px}label{font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+    input{width:170px;max-width:100%;height:58px;border:1px solid var(--line);border-radius:6px;background:#fffefa;color:var(--green);font:26px/1 system-ui,sans-serif;text-align:center;letter-spacing:.38em;padding:10px 10px 10px 20px}
+    input[aria-invalid=true]{border-color:#895331}button{font:inherit;cursor:pointer}button[type=submit]{width:170px;max-width:100%;border:1px solid var(--green);border-radius:6px;background:var(--green);color:var(--paper);padding:11px 16px;font-size:13px}
+    button:disabled{opacity:.6;cursor:wait}.cancel{border:0;background:transparent;color:var(--muted);font-size:12px;padding:4px 10px}.cancel:hover{text-decoration:underline}
+    .message{font-size:12px;line-height:1.5;color:#895331;min-height:18px;margin:0;max-width:260px}
+    @media(prefers-reduced-motion:reduce){summary{transition:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <details id="entrance">
+      <summary aria-label="Enter wedding directory" title="Enter">W</summary>
+      <form id="unlock-form" action="https://mehz.org/wedding/unlock" method="post">
+        <label for="code">Enter code</label>
+        <input id="code" name="code" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required aria-describedby="message">
+        <button id="unlock" type="submit">Unlock</button>
+        <p class="message" id="message" role="alert"></p>
+        <button class="cancel" id="cancel" type="button">Cancel</button>
+      </form>
+    </details>
+  </main>
+  <script>
+  (()=>{
+    const entrance=document.getElementById('entrance');
+    const form=document.getElementById('unlock-form');
+    const code=document.getElementById('code');
+    const message=document.getElementById('message');
+    const button=document.getElementById('unlock');
+    let busy=false;
+    function cancel(){if(busy)return;entrance.open=false;code.value='';message.textContent='';code.removeAttribute('aria-invalid');entrance.querySelector('summary').focus();}
+    entrance.addEventListener('toggle',()=>{if(entrance.open)code.focus();});
+    document.getElementById('cancel').addEventListener('click',cancel);
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&entrance.open)cancel();});
+    code.addEventListener('input',()=>{code.removeAttribute('aria-invalid');message.textContent='';});
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();if(busy)return;busy=true;button.disabled=true;button.textContent='Opening…';message.textContent='';
+      try{
+        const response=await fetch(form.action,{method:'POST',headers:{Accept:'application/json'},body:new URLSearchParams({code:code.value}),credentials:'same-origin',cache:'no-store'});
+        const result=await response.json();
+        if(response.ok&&result.ok){location.replace('https://mehz.org/wedding/');return;}
+        message.textContent=result.message||'Unable to unlock right now. Please try again.';
+        if(response.status===401)code.setAttribute('aria-invalid','true');
+        code.focus();code.select();
+      }catch{message.textContent='Unable to connect. Please try again.';}
+      finally{busy=false;button.disabled=false;button.textContent='Unlock';}
+    });
+  })();
+  </script>
+</body>
+</html>

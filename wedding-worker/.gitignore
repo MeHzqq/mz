@@ -1,0 +1,5 @@
+_content/
+.dev.vars
+.dev.vars.*
+.wrangler/
+dist/
